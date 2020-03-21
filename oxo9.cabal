@@ -1,0 +1,18 @@
+cabal-version:       >=1.10
+name:                oxo9
+version:             0.1.0.0
+license-file:        LICENSE
+author:              Basile Henry & Augustin Henry
+maintainer:          bjm.henry@gmail.com
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+
+executable oxo9
+  main-is:             Main.hs
+  other-modules:       Board
+  -- other-extensions:
+  build-depends:       base >=4.12 && <4.13,
+                       scotty,
+                       text
+  hs-source-dirs:      src
+  default-language:    Haskell2010
