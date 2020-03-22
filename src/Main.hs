@@ -4,16 +4,14 @@ module Main where
 
 -- base
 import           Control.Concurrent.MVar
-import Control.Monad.IO.Class
+import           Control.Monad.IO.Class
+import           Data.Foldable
 
 -- scotty
-import           Web.Scotty  (get, html, param, scotty)
+import           Web.Scotty
 
--- text
-import           Data.Text.Lazy   (Text)
-import qualified Data.Text.Lazy   as T
-
-import Board
+import           Board
+import           Html
 
 main :: IO ()
 main = do
@@ -22,6 +20,12 @@ main = do
     get "/reset" $
       liftIO $ putMVar board startBoard
 
+    get "/:player" $ do
+      player <- param "player"
+      newBoard <- liftIO $ readMVar board
+      liftIO $ print newBoard
+      html . renderHtml $ page player newBoard
+
     get "/:player/:x:y:mx:my" $ do
       player <- param "player"
       x <- param "x"
@@ -29,37 +33,34 @@ main = do
       mx <- param "mx"
       my <- param "my"
 
+      liftIO $ print (player, x, y, mx, my)
       liftIO $ modifyMVar_ board
         (pure . play player (x, y) (mx, my))
 
-      newBoard <- liftIO $ readMVar board
+      redirect $ "/" <> playerURL player
 
-      html $ page player newBoard
-
-page :: Player -> Board -> Text
-page player board = T.unlines
-  [ "<!DOCTYPE HTML>"
-  , "<html>"
-  , "  <head>"
-  , "    <title>OXO 9</title>"
-  , "    <style>"
-  , "      body {"
-  , "        font-size: 2em;"
-  , "      }"
-  , "      td {"
-  , "          border: 1px solid #333;"
-  , "      }"
-  , "      a {"
-  , "        -webkit-appearance: button;"
-  , "        -moz-appearance: button;"
-  , "        appearance: button;"
-  , "        text-decoration: none;"
-  , "        color: initial;"
-  , "      }"
-  , "    </style>"
-  , "  </head>"
-  , "  <body>"
-  , render player board
-  , "  </body>"
-  , "</html>"
+page :: Player -> Board -> Html
+page player board = fold
+  [ Html ["<!DOCTYPE HTML>"]
+  , node "html" [] $ fold
+    [ node "head" [] $ fold
+      [ inlineNode "title" [] "OXO 9"
+      , node "style" [] $ Html
+        [ "body {"
+        , "  font-size: 2em;"
+        , "}"
+        , "td {"
+        , "  border: 1px solid #333;"
+        , "}"
+        , "a {"
+        , "  -webkit-appearance: button;"
+        , "  -moz-appearance: button;"
+        , "  appearance: button;"
+        , "  text-decoration: none;"
+        , "  color: initial;"
+        , "}"
+        ]
+      ]
+    , node "body" [] (boardHtml player board)
+    ]
   ]

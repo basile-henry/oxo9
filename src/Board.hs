@@ -2,12 +2,17 @@
 
 module Board where
 
+-- base
+import           Data.Foldable  (fold)
+
 -- scotty
-import           Web.Scotty  (Parsable(..))
+import           Web.Scotty     (Parsable (..))
 
 -- text
-import           Data.Text.Lazy   (Text)
--- import qualified Data.Text.Lazy   as T
+import           Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as T
+
+import           Html
 
 data Player = PlayerX | PlayerO deriving (Eq, Show)
 
@@ -20,12 +25,10 @@ data Cell = Empty | X | O deriving (Eq, Show)
 
 newtype MiniBoard = MiniBoard [[Cell]] deriving Show
 
-type Pos = (Int, Int)
-
 data Board = Board
-  { getPlayer :: Player
+  { getPlayer    :: Player
   , lastPosition :: Maybe Pos
-  , getBoard :: [[MiniBoard]]
+  , getBoard     :: [[MiniBoard]]
   } deriving Show
 
 startBoard :: Board
@@ -33,22 +36,19 @@ startBoard =
   let grid = replicate 3 . replicate 3
   in Board PlayerX Nothing . grid . MiniBoard $ grid Empty
 
-render :: Player -> Board -> Text
-render _ _ = "hello"
-
 getMiniBoard :: Board -> Pos -> MiniBoard
 getMiniBoard (Board _ _ b) (x, y) = b !! y !! x
 
 alreadyPlayed :: Pos -> Pos -> Board -> Bool
 alreadyPlayed pos (mx,my) b =
   let MiniBoard mb = getMiniBoard b pos
-  in mb !! my !! mx /= Empty 
+  in mb !! my !! mx /= Empty
 
 miniBoardComplete :: MiniBoard -> Bool
 miniBoardComplete (MiniBoard l) = all (notElem Empty) l
 
 invalidPlacement :: Pos -> Pos -> Board -> Bool
-invalidPlacement pos mpos b = 
+invalidPlacement pos mpos b =
   alreadyPlayed pos mpos b ||
     case lastPosition b of
       Nothing -> False
@@ -88,3 +88,44 @@ play player pos mpos board
       (otherPlayer player)
       (Just mpos)
       (updateBoard (playerCell player) pos mpos (getBoard board))
+
+indented :: [Text] -> Text
+indented = T.unlines . map ("  " <>)
+
+playerURL :: Player -> Text
+playerURL PlayerX = "x"
+playerURL PlayerO = "o"
+
+showPlayer :: Player -> Text
+showPlayer PlayerX = "✖"
+showPlayer PlayerO = "🞇"
+
+showCell :: Cell -> Text
+showCell X     = "✖"
+showCell O     = "🞇"
+showCell Empty = "·"
+
+show' :: Show a => a -> Text
+show' = T.pack . show
+
+renderCell :: Player -> Pos -> Pos -> Cell -> Html
+renderCell player (x, y) (mx, my) cell =
+  let clickUrl = url
+        ("/" <> playerURL player <> "/coords")
+        [ ("x", show' x)
+        , ("y", show' y)
+        , ("mx", show' mx)
+        , ("my", show' my)
+        ]
+  in a [("href", clickUrl)] (showCell cell)
+
+renderMiniBoard :: Player -> Pos -> MiniBoard -> Html
+renderMiniBoard player pos (MiniBoard mb) =
+  table [("class", "miniboard")] (renderCell player pos) mb
+
+boardHtml :: Player -> Board -> Html
+boardHtml player board = fold
+  [ p $ "You are player " <> showPlayer player
+  , p $ "It is player " <> showPlayer (getPlayer board) <> "'s turn"
+  , table [("class", "board")] (renderMiniBoard player) (getBoard board)
+  ]
