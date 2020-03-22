@@ -20,11 +20,14 @@ main = do
     get "/reset" $
       liftIO $ putMVar board startBoard
 
+    get "/" $ do
+      html $ renderHtml landingPage
+
     get "/:player" $ do
       player <- param "player"
       newBoard <- liftIO $ readMVar board
       liftIO $ print newBoard
-      html . renderHtml $ page player newBoard
+      html . renderHtml $ page (boardHtml player newBoard)
 
     get "/:player/:x:y:mx:my" $ do
       player <- param "player"
@@ -39,8 +42,8 @@ main = do
 
       redirect $ "/" <> playerURL player
 
-page :: Player -> Board -> Html
-page player board = fold
+page :: Html -> Html
+page content = fold
   [ Html ["<!DOCTYPE HTML>"]
   , node "html" [] $ fold
     [ node "head" [] $ fold
@@ -61,6 +64,12 @@ page player board = fold
         , "}"
         ]
       ]
-    , node "body" [] (boardHtml player board)
+    , node "body" [] content
     ]
+  ]
+
+landingPage :: Html
+landingPage = page $ fold
+  [ a [("href", "/x")] ("Play as " <> showPlayer PlayerX)
+  , a [("href", "/o")] ("Play as " <> showPlayer PlayerO)
   ]
