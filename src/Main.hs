@@ -3,7 +3,6 @@
 module Main where
 
 -- base
-import           Data.Monoid (mconcat)
 import           Control.Concurrent.MVar
 import Control.Monad.IO.Class
 
